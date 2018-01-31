@@ -1,7 +1,102 @@
 package gooctranspoapi
 
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strconv"
+)
+
+const GTFSMethodPath = "Gtfs"
+
+func ID(id string) func(url.Values) error {
+	return func(query url.Values) error {
+		query.Set("id", id)
+		return nil
+	}
+}
+
+func Column(column string) func(url.Values) error {
+	return func(query url.Values) error {
+		query.Set("column", column)
+		return nil
+	}
+}
+
+func Value(value string) func(url.Values) error {
+	return func(query url.Values) error {
+		query.Set("value", value)
+		return nil
+	}
+}
+
+func OrderBy(orderBy string) func(url.Values) error {
+	return func(query url.Values) error {
+		if orderBy != "asc" && orderBy != "desc" {
+			return errors.New("OrderBy only accepts asc or desc as parameters.")
+		}
+		query.Set("orderBy", orderBy)
+		return nil
+	}
+}
+
+func Direction(direction string) func(url.Values) error {
+	return func(query url.Values) error {
+		query.Set("direction", direction)
+		return nil
+	}
+}
+
+func Limit(limit int) func(url.Values) error {
+	return func(query url.Values) error {
+		query.Set("limit", strconv.Itoa(limit))
+		return nil
+	}
+}
+
+func (c *Connection) GTFSAgency(options ...func(url.Values) error) (*GTFSAgencyData, error) {
+
+	apiURL, err := url.Parse(ApiURLPrefix + GTFSMethodPath)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(apiURL)
+	query := c.setupQuery()
+	query.Set("table", "agency")
+
+	for _, opt := range options {
+		err := opt(query)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if query.Get("column") != "" && query.Get("value") == "" {
+		return nil, errors.New("If a column is specified, a value must also be specified.")
+	}
+
+	apiURL.RawQuery = query.Encode()
+	fmt.Println(apiURL)
+
+	resp, err := http.Get(apiURL.String())
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("Non 200 HTTP response from API. %v %v", resp.Status, apiURL)
+	}
+
+	data := &GTFSAgencyData{}
+	err = json.NewDecoder(resp.Body).Decode(data)
+	return data, err
+}
+
 // https://api.octranspo1.com/v1.2/Gtfs agency table
-type GTFSAgency struct {
+type GTFSAgencyData struct {
 	Query struct {
 		Table     string `json:"table"`
 		Direction string `json:"direction"`
