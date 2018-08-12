@@ -11,6 +11,7 @@ import (
 	"strconv"
 )
 
+// ID will setup the request to return a specific row in a table by the id value.
 func ID(id string) func(url.Values) error {
 	return func(v url.Values) error {
 		v.Set("id", id)
@@ -18,6 +19,7 @@ func ID(id string) func(url.Values) error {
 	}
 }
 
+// ColumnAndValue will setup the request to return data from a specific column and value.
 func ColumnAndValue(column, value string) func(url.Values) error {
 	return func(v url.Values) error {
 		v.Set("column", column)
@@ -26,23 +28,26 @@ func ColumnAndValue(column, value string) func(url.Values) error {
 	}
 }
 
+// OrderBy will setup the request to sort the data by a specific column.
 func OrderBy(orderBy string) func(url.Values) error {
 	return func(v url.Values) error {
-		if orderBy != "asc" && orderBy != "desc" {
-			return errors.New("OrderBy only accepts asc or desc as parameters.")
-		}
 		v.Set("orderBy", orderBy)
 		return nil
 	}
 }
 
+// Direction will setup the request to direction of sorted records, asc and desc.
 func Direction(direction string) func(url.Values) error {
 	return func(v url.Values) error {
+		if direction != "asc" && direction != "desc" {
+			return errors.New("direction only accepts asc or desc as parameters")
+		}
 		v.Set("direction", direction)
 		return nil
 	}
 }
 
+// Limit will setup the request to only return a maximum number of records.
 func Limit(limit int) func(url.Values) error {
 	return func(v url.Values) error {
 		v.Set("limit", strconv.Itoa(limit))
@@ -57,13 +62,13 @@ func setTable(table string) func(url.Values) error {
 	}
 }
 
-func (c *Connection) setupGTFSURL(options ...func(url.Values) error) (*url.URL, error) {
-	u, err := url.Parse(ApiURLPrefix + "Gtfs")
+func (c Connection) setupGTFSURL(options ...func(url.Values) error) (*url.URL, error) {
+	u, err := url.Parse(APIURLPrefix + "Gtfs")
 	if err != nil {
 		return nil, err
 	}
 	v := url.Values{}
-	v.Set("appID", c.Id)
+	v.Set("appID", c.ID)
 	v.Set("apiKey", c.Key)
 	v.Set("format", "json")
 	for _, opt := range options {
@@ -76,7 +81,7 @@ func (c *Connection) setupGTFSURL(options ...func(url.Values) error) (*url.URL, 
 	return u, nil
 }
 
-func (c *Connection) performGTFSRequest(ctx context.Context, u *url.URL) (io.ReadCloser, error) {
+func (c Connection) performGTFSRequest(ctx context.Context, u *url.URL) (io.ReadCloser, error) {
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, err
@@ -104,7 +109,7 @@ func (c *Connection) performGTFSRequest(ctx context.Context, u *url.URL) (io.Rea
 	return resp.Body, nil
 }
 
-// https://api.octranspo1.com/v1.2/Gtfs agency table
+// GTFSAgency is the GTFS agency table.
 type GTFSAgency struct {
 	Query struct {
 		Table     string `json:"table"`
@@ -121,7 +126,8 @@ type GTFSAgency struct {
 	} `json:"Gtfs"`
 }
 
-func (c *Connection) GetGTFSAgency(ctx context.Context, options ...func(url.Values) error) (*GTFSAgency, error) {
+// GetGTFSAgency returns the GTFS agency table.
+func (c Connection) GetGTFSAgency(ctx context.Context, options ...func(url.Values) error) (*GTFSAgency, error) {
 	options = append(options, setTable("agency"))
 	u, err := c.setupGTFSURL(options...)
 	if err != nil {
@@ -137,7 +143,7 @@ func (c *Connection) GetGTFSAgency(ctx context.Context, options ...func(url.Valu
 	return data, err
 }
 
-// https://api.octranspo1.com/v1.2/Gtfs calendar table
+// GTFSCalendar is the GTFS calendar table.
 type GTFSCalendar struct {
 	Query struct {
 		Table     string `json:"table"`
@@ -159,7 +165,8 @@ type GTFSCalendar struct {
 	} `json:"Gtfs"`
 }
 
-func (c *Connection) GetGTFSCalendar(ctx context.Context, options ...func(url.Values) error) (*GTFSCalendar, error) {
+// GetGTFSCalendar returns the GTFS calendar table.
+func (c Connection) GetGTFSCalendar(ctx context.Context, options ...func(url.Values) error) (*GTFSCalendar, error) {
 	options = append(options, setTable("calendar"))
 	u, err := c.setupGTFSURL(options...)
 	if err != nil {
@@ -175,7 +182,7 @@ func (c *Connection) GetGTFSCalendar(ctx context.Context, options ...func(url.Va
 	return data, err
 }
 
-// https://api.octranspo1.com/v1.2/Gtfs calendar_dates table
+// GTFSCalendarDates is GTFS calendar_dates table.
 type GTFSCalendarDates struct {
 	Query struct {
 		Table     string `json:"table"`
@@ -190,7 +197,8 @@ type GTFSCalendarDates struct {
 	} `json:"Gtfs"`
 }
 
-func (c *Connection) GetGTFSCalendarDates(ctx context.Context, options ...func(url.Values) error) (*GTFSCalendarDates, error) {
+// GetGTFSCalendarDates returns the GTFS calendar_dates table
+func (c Connection) GetGTFSCalendarDates(ctx context.Context, options ...func(url.Values) error) (*GTFSCalendarDates, error) {
 	options = append(options, setTable("calendar_dates"))
 	u, err := c.setupGTFSURL(options...)
 	if err != nil {
@@ -206,7 +214,7 @@ func (c *Connection) GetGTFSCalendarDates(ctx context.Context, options ...func(u
 	return data, err
 }
 
-// https://api.octranspo1.com/v1.2/Gtfs routes table
+// GTFSRoutes is the GTFS routes table.
 type GTFSRoutes struct {
 	Query struct {
 		Table     string `json:"table"`
@@ -223,7 +231,8 @@ type GTFSRoutes struct {
 	} `json:"Gtfs"`
 }
 
-func (c *Connection) GetGTFSRoutes(ctx context.Context, options ...func(url.Values) error) (*GTFSRoutes, error) {
+// GetGTFSRoutes returns the GTFS routes table.
+func (c Connection) GetGTFSRoutes(ctx context.Context, options ...func(url.Values) error) (*GTFSRoutes, error) {
 	options = append(options, setTable("routes"))
 	u, err := c.setupGTFSURL(options...)
 	if err != nil {
@@ -239,7 +248,7 @@ func (c *Connection) GetGTFSRoutes(ctx context.Context, options ...func(url.Valu
 	return data, err
 }
 
-// https://api.octranspo1.com/v1.2/Gtfs stops table
+// GTFSStops is the GTFS stops table.
 type GTFSStops struct {
 	Query struct {
 		Table     string `json:"table"`
@@ -263,7 +272,9 @@ type GTFSStops struct {
 	} `json:"Gtfs"`
 }
 
-func (c *Connection) GetGTFSStops(ctx context.Context, options ...func(url.Values) error) (*GTFSStops, error) {
+// GetGTFSStops returns the GTFS stops table.
+// It requires a stop_id, stop_code or id value specified, using ColumnAndValue() or ID() options.
+func (c Connection) GetGTFSStops(ctx context.Context, options ...func(url.Values) error) (*GTFSStops, error) {
 	options = append(options, setTable("stops"))
 	u, err := c.setupGTFSURL(options...)
 	if err != nil {
@@ -274,7 +285,7 @@ func (c *Connection) GetGTFSStops(ctx context.Context, options ...func(url.Value
 		return nil, err
 	}
 	if v.Get("column") != "stop_id" && v.Get("column") != "stop_code" && v.Get("id") == "" {
-		return nil, errors.New("GetGTFSStops requires a stop_id, stop_code or id value specified.")
+		return nil, errors.New("a stop_id, stop_code or id value must be specified")
 	}
 	respBody, err := c.performGTFSRequest(ctx, u)
 	if err != nil {
@@ -286,7 +297,7 @@ func (c *Connection) GetGTFSStops(ctx context.Context, options ...func(url.Value
 	return data, err
 }
 
-// https://api.octranspo1.com/v1.2/Gtfs stop_times table
+// GTFSStopTimes is the GTFS stop_times table.
 type GTFSStopTimes struct {
 	Query struct {
 		Table     string `json:"table"`
@@ -307,7 +318,9 @@ type GTFSStopTimes struct {
 	} `json:"Gtfs"`
 }
 
-func (c *Connection) GetGTFSStopTimes(ctx context.Context, options ...func(url.Values) error) (*GTFSStopTimes, error) {
+// GetGTFSStopTimes returns the GTFS stop_times table.
+// It requires a trip_id, stop_code or id value specified, using ColumnAndValue() or ID() options.
+func (c Connection) GetGTFSStopTimes(ctx context.Context, options ...func(url.Values) error) (*GTFSStopTimes, error) {
 	options = append(options, setTable("stop_times"))
 	u, err := c.setupGTFSURL(options...)
 	if err != nil {
@@ -318,7 +331,7 @@ func (c *Connection) GetGTFSStopTimes(ctx context.Context, options ...func(url.V
 		return nil, err
 	}
 	if v.Get("column") != "trip_id" && v.Get("column") != "stop_id" && v.Get("id") == "" {
-		return nil, errors.New("GetGTFSStopTimes requires a trip_id, stop_id or id value specified.")
+		return nil, errors.New("a trip_id, stop_id or id value must be specified")
 	}
 	respBody, err := c.performGTFSRequest(ctx, u)
 	if err != nil {
@@ -330,7 +343,7 @@ func (c *Connection) GetGTFSStopTimes(ctx context.Context, options ...func(url.V
 	return data, err
 }
 
-// https://api.octranspo1.com/v1.2/Gtfs trips table
+// GTFSTrips is the GTFS trips table.
 type GTFSTrips struct {
 	Query struct {
 		Table     string `json:"table"`
@@ -350,7 +363,9 @@ type GTFSTrips struct {
 	} `json:"Gtfs"`
 }
 
-func (c *Connection) GetGTFSTrips(ctx context.Context, options ...func(url.Values) error) (*GTFSTrips, error) {
+// GetGTFSTrips returns the GTFS trips table.
+// It requires a route_id or id value specified, using ColumnAndValue() or ID() options.
+func (c Connection) GetGTFSTrips(ctx context.Context, options ...func(url.Values) error) (*GTFSTrips, error) {
 	options = append(options, setTable("trips"))
 	u, err := c.setupGTFSURL(options...)
 	if err != nil {
@@ -361,7 +376,7 @@ func (c *Connection) GetGTFSTrips(ctx context.Context, options ...func(url.Value
 		return nil, err
 	}
 	if v.Get("column") != "route_id" && v.Get("id") == "" {
-		return nil, errors.New("GetGTFSTrips requires a route_id or id value specified.")
+		return nil, errors.New("a route_id or id value must be specified")
 	}
 	respBody, err := c.performGTFSRequest(ctx, u)
 	if err != nil {

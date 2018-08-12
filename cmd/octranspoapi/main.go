@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"github.com/davecgh/go-spew/spew"
 	api "github.com/transitreport/gooctranspoapi"
 	"log"
@@ -11,12 +12,15 @@ import (
 	"time"
 )
 
+const splitterString = "\n\n------------------------------------------------\n\n"
+
 var (
 	id  = flag.String("id", "", "appID")
 	key = flag.String("key", "", "apiKey")
 )
 
 func main() {
+
 	// Process the flags.
 	flag.Parse()
 
@@ -51,11 +55,15 @@ func main() {
 	}
 	spew.Dump(agency)
 
+	fmt.Print(splitterString)
+
 	cal, err := c.GetGTFSCalendar(ctx)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	spew.Dump(cal)
+
+	fmt.Print(splitterString)
 
 	caldates, err := c.GetGTFSCalendarDates(ctx)
 	if err != nil {
@@ -63,11 +71,15 @@ func main() {
 	}
 	spew.Dump(caldates)
 
+	fmt.Print(splitterString)
+
 	routes, err := c.GetGTFSRoutes(ctx)
 	if err != nil {
 		log.Fatalln(err)
 	}
 	spew.Dump(routes)
+
+	fmt.Print(splitterString)
 
 	stops, err := c.GetGTFSStops(ctx, api.ColumnAndValue("stop_id", "7659"))
 	if err != nil {
@@ -75,11 +87,15 @@ func main() {
 	}
 	spew.Dump(stops)
 
+	fmt.Print(splitterString)
+
 	times, err := c.GetGTFSStopTimes(ctx, api.ColumnAndValue("stop_id", "7659"))
 	if err != nil {
 		log.Fatalln(err)
 	}
 	spew.Dump(times)
+
+	fmt.Print(splitterString)
 
 	trips, err := c.GetGTFSTrips(ctx, api.ColumnAndValue("route_id", "1"))
 	if err != nil {
@@ -87,9 +103,29 @@ func main() {
 	}
 	spew.Dump(trips)
 
-	x, err := c.GetRouteSummaryForStop(ctx, "7659")
+	fmt.Print(splitterString)
+
+	routeSummary, err := c.GetRouteSummaryForStop(ctx, "7659")
 	if err != nil {
 		log.Fatalln(err)
 	}
-	spew.Dump(x)
+	spew.Dump(routeSummary)
+
+	fmt.Print(splitterString)
+
+	nextTrips, err := c.GetNextTripsForStop(ctx, "6", "7659")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	spew.Dump(nextTrips)
+
+	fmt.Print(splitterString)
+
+	nextTripsAllRoutes, err := c.GetNextTripsForStopAllRoutes(ctx, "7659")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	spew.Dump(nextTripsAllRoutes)
+
+	fmt.Print(splitterString)
 }
