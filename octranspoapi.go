@@ -4,32 +4,31 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// ApiURLPrefix is the address at which the API is available.
 const ApiURLPrefix = "https://api.octranspo1.com/v1.2/"
 
+// Connection holds the Application ID and API key needed to make requests.
+// It also has a rate limiter, used by the Connection's methods to limit calls on the API.
 type Connection struct {
-	id      string
-	key     string
-	limiter *rate.Limiter
+	Id      string
+	Key     string
+	Limiter *rate.Limiter
 }
 
-func NewConnection(id, key string, options ...func(*Connection) error) (*Connection, error) {
-	c := &Connection{
-		id:      id,
-		key:     key,
-		limiter: rate.NewLimiter(rate.Inf, 0),
+// NewConnection returns a new connection without a rate limit.
+func NewConnection(id, key string) Connection {
+	return Connection{
+		Id:      id,
+		Key:     key,
+		Limiter: rate.NewLimiter(rate.Inf, 0),
 	}
-	for _, opt := range options {
-		err := opt(c)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return c, nil
 }
 
-func RateLimit(perSecond float64) func(*Connection) error {
-	return func(c *Connection) error {
-		c.limiter = rate.NewLimiter(rate.Limit(perSecond), 1)
-		return nil
+// NewConnectionWithRateLimit returns a new connection with a rate limit set.
+func NewConnectionWithRateLimit(id, key string, perSecond float64, burst int) Connection {
+	return Connection{
+		Id:      id,
+		Key:     key,
+		Limiter: rate.NewLimiter(rate.Limit(perSecond), burst),
 	}
 }

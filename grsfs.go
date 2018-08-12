@@ -57,8 +57,8 @@ func (c *Connection) GetRouteSummaryForStop(ctx context.Context, stopNo string) 
 		return nil, err
 	}
 	v := url.Values{}
-	v.Set("appID", c.id)
-	v.Set("apiKey", c.key)
+	v.Set("appID", c.Id)
+	v.Set("apiKey", c.Key)
 	v.Set("stopNo", stopNo)
 
 	req, err := http.NewRequest("POST", u.String(), strings.NewReader(v.Encode()))
@@ -69,7 +69,7 @@ func (c *Connection) GetRouteSummaryForStop(ctx context.Context, stopNo string) 
 	req = req.WithContext(ctx)
 	req.Close = true
 
-	err = c.limiter.Wait(ctx)
+	err = c.Limiter.Wait(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -27,10 +27,7 @@ func main() {
 		log.Fatalln("FATAL: An apiKey for the OC Transpo API is required.")
 	}
 
-	c, err := api.NewConnection(*id, *key, api.RateLimit(1))
-	if err != nil {
-		log.Fatalln(err)
-	}
+	c := api.NewConnectionWithRateLimit(*id, *key, 1, 1)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

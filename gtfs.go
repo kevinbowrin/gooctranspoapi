@@ -63,8 +63,8 @@ func (c *Connection) setupGTFSURL(options ...func(url.Values) error) (*url.URL, 
 		return nil, err
 	}
 	v := url.Values{}
-	v.Set("appID", c.id)
-	v.Set("apiKey", c.key)
+	v.Set("appID", c.Id)
+	v.Set("apiKey", c.Key)
 	v.Set("format", "json")
 	for _, opt := range options {
 		err := opt(v)
@@ -84,7 +84,7 @@ func (c *Connection) performGTFSRequest(ctx context.Context, u *url.URL) (io.Rea
 	req = req.WithContext(ctx)
 	req.Close = true
 
-	err = c.limiter.Wait(ctx)
+	err = c.Limiter.Wait(ctx)
 	if err != nil {
 		return nil, err
 	}
