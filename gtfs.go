@@ -1,4 +1,4 @@
-package octranspoapi
+package gooctranspoapi
 
 import (
 	"context"

@@ -1,5 +1,5 @@
-// Package octranspoapi provides a Go wrapper around the OC Transpo Live Next Bus Arrival Data Feed API.
-package octranspoapi
+// Package gooctranspoapi provides a Go wrapper around the OC Transpo Live Next Bus Arrival Data Feed API.
+package gooctranspoapi
 
 import (
 	"context"
