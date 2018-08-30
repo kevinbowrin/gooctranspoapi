@@ -95,7 +95,7 @@ type Route struct {
 
 // RawRouteSummaryForStop is a wrapper around the XML data returned by
 // a request to GetRouteSummaryForStop.
-type RawRouteSummaryForStop struct {
+type rawRouteSummaryForStop struct {
 	XMLName xml.Name `xml:"Envelope"`
 	Text    string   `xml:",chardata"`
 	Soap    string   `xml:"soap,attr"`
@@ -137,7 +137,7 @@ type RawRouteSummaryForStop struct {
 }
 
 // Cook takes a raw XML RouteSummaryForStop and simplifies it.
-func (d *RawRouteSummaryForStop) Cook() *RouteSummaryForStop {
+func (d *rawRouteSummaryForStop) cook() *RouteSummaryForStop {
 	cooked := &RouteSummaryForStop{}
 	cooked.StopNo = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.StopNo.Text
 	cooked.StopDescription = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.StopDescription.Text
@@ -172,10 +172,10 @@ func (c Connection) GetRouteSummaryForStop(ctx context.Context, stopNo string) (
 	dec := xml.NewDecoder(respBody)
 	dec.CharsetReader = charset.NewReaderLabel
 	dec.Strict = false
-	data := &RawRouteSummaryForStop{}
+	data := &rawRouteSummaryForStop{}
 	err = dec.Decode(data)
 	respBody.Close()
-	return data.Cook(), err
+	return data.cook(), err
 }
 
 // NextTripsForStop is a rough wrapper around the XML data returned by
