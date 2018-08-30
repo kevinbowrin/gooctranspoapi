@@ -19,17 +19,19 @@ const APIURLPrefix = "https://api.octranspo1.com/v1.2/"
 // Connection holds the Application ID and API key needed to make requests.
 // It also has a rate limiter, used by the Connection's methods to limit calls on the API.
 type Connection struct {
-	ID      string
-	Key     string
-	Limiter *rate.Limiter
+	ID            string
+	Key           string
+	Limiter       *rate.Limiter
+	cAPIURLPrefix string
 }
 
 // NewConnection returns a new connection without a rate limit.
 func NewConnection(id, key string) Connection {
 	return Connection{
-		ID:      id,
-		Key:     key,
-		Limiter: rate.NewLimiter(rate.Inf, 0),
+		ID:            id,
+		Key:           key,
+		Limiter:       rate.NewLimiter(rate.Inf, 0),
+		cAPIURLPrefix: APIURLPrefix,
 	}
 }
 
@@ -38,9 +40,10 @@ func NewConnection(id, key string) Connection {
 // It you use the connection over 24 hours, a connection with a perSecond rate of 0.11572 would make around 9998 requests.
 func NewConnectionWithRateLimit(id, key string, perSecond float64, burst int) Connection {
 	return Connection{
-		ID:      id,
-		Key:     key,
-		Limiter: rate.NewLimiter(rate.Limit(perSecond), burst),
+		ID:            id,
+		Key:           key,
+		Limiter:       rate.NewLimiter(rate.Limit(perSecond), burst),
+		cAPIURLPrefix: APIURLPrefix,
 	}
 }
 
@@ -73,9 +76,26 @@ func (c Connection) performRequest(ctx context.Context, u url.URL, v url.Values)
 	return resp.Body, nil
 }
 
-// RouteSummaryForStop is a rough wrapper around the XML data returned by
-// a request to GetRouteSummaryForStop. #TODO: Create a SimpleRouteSummaryForStop
+// RouteSummaryForStop is a simplified version of the data returned by
+// a request to GetRouteSummaryForStop.
 type RouteSummaryForStop struct {
+	StopNo          string
+	StopDescription string
+	Error           string
+	Routes          []Route
+}
+
+// Route is used by RouteSummaryForStop to store route data.
+type Route struct {
+	RouteNo      string
+	DirectionID  string
+	Direction    string
+	RouteHeading string
+}
+
+// RawRouteSummaryForStop is a wrapper around the XML data returned by
+// a request to GetRouteSummaryForStop.
+type RawRouteSummaryForStop struct {
 	XMLName xml.Name `xml:"Envelope"`
 	Text    string   `xml:",chardata"`
 	Soap    string   `xml:"soap,attr"`
@@ -116,9 +136,26 @@ type RouteSummaryForStop struct {
 	} `xml:"Body"`
 }
 
+// Cook takes a raw XML RouteSummaryForStop and simplifies it.
+func (d *RawRouteSummaryForStop) Cook() *RouteSummaryForStop {
+	cooked := &RouteSummaryForStop{}
+	cooked.StopNo = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.StopNo.Text
+	cooked.StopDescription = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.StopDescription.Text
+	cooked.Error = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.Error.Text
+	for _, r := range d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.Routes.Route {
+		cr := Route{}
+		cr.RouteNo = r.RouteNo
+		cr.DirectionID = r.DirectionID
+		cr.Direction = r.Direction
+		cr.RouteHeading = r.RouteHeading
+		cooked.Routes = append(cooked.Routes, cr)
+	}
+	return cooked
+}
+
 // GetRouteSummaryForStop returns the routes for a given stop number.
 func (c Connection) GetRouteSummaryForStop(ctx context.Context, stopNo string) (*RouteSummaryForStop, error) {
-	u, err := url.Parse(APIURLPrefix + "GetRouteSummaryForStop")
+	u, err := url.Parse(c.cAPIURLPrefix + "GetRouteSummaryForStop")
 	if err != nil {
 		return nil, err
 	}
@@ -135,10 +172,10 @@ func (c Connection) GetRouteSummaryForStop(ctx context.Context, stopNo string) (
 	dec := xml.NewDecoder(respBody)
 	dec.CharsetReader = charset.NewReaderLabel
 	dec.Strict = false
-	data := &RouteSummaryForStop{}
+	data := &RawRouteSummaryForStop{}
 	err = dec.Decode(data)
 	respBody.Close()
-	return data, err
+	return data.Cook(), err
 }
 
 // NextTripsForStop is a rough wrapper around the XML data returned by
