@@ -63,7 +63,7 @@ func setTable(table string) func(url.Values) error {
 }
 
 func (c Connection) setupGTFSURL(options ...func(url.Values) error) (*url.URL, error) {
-	u, err := url.Parse(APIURLPrefix + "Gtfs")
+	u, err := url.Parse(c.cAPIURLPrefix + "Gtfs")
 	if err != nil {
 		return nil, err
 	}

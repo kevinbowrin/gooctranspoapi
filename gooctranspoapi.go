@@ -4,13 +4,16 @@ package gooctranspoapi
 import (
 	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/time/rate"
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // APIURLPrefix is the address at which the API is available.
@@ -137,11 +140,17 @@ type rawRouteSummaryForStop struct {
 }
 
 // Cook takes a raw XML RouteSummaryForStop and simplifies it.
-func (d *rawRouteSummaryForStop) cook() *RouteSummaryForStop {
+func (d *rawRouteSummaryForStop) cook() (*RouteSummaryForStop, error) {
 	cooked := &RouteSummaryForStop{}
 	cooked.StopNo = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.StopNo.Text
 	cooked.StopDescription = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.StopDescription.Text
-	cooked.Error = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.Error.Text
+
+	errorText, err := checkErrorCode(d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.Error.Text)
+	if err != nil {
+		return nil, err
+	}
+	cooked.Error = errorText
+
 	for _, r := range d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.Routes.Route {
 		cr := Route{}
 		cr.RouteNo = r.RouteNo
@@ -150,7 +159,7 @@ func (d *rawRouteSummaryForStop) cook() *RouteSummaryForStop {
 		cr.RouteHeading = r.RouteHeading
 		cooked.Routes = append(cooked.Routes, cr)
 	}
-	return cooked
+	return cooked, nil
 }
 
 // GetRouteSummaryForStop returns the routes for a given stop number.
@@ -175,12 +184,72 @@ func (c Connection) GetRouteSummaryForStop(ctx context.Context, stopNo string) (
 	data := &rawRouteSummaryForStop{}
 	err = dec.Decode(data)
 	respBody.Close()
-	return data.cook(), err
+	if err != nil {
+		return nil, err
+	}
+
+	return data.cook()
 }
 
-// NextTripsForStop is a rough wrapper around the XML data returned by
-// a request to GetNextTripsForStop. #TODO: Create a SimpleGetNextTripsForStop
+// NextTripsForStop is a simplified version of the data returned by
+// a request to GetNextTripsForStop
 type NextTripsForStop struct {
+	StopNo          string
+	StopLabel       string
+	Error           string
+	RouteDirections []RouteDirection
+}
+
+// RouteDirection is used by NextTripsForStop to store route direction data.
+type RouteDirection struct {
+	RouteNo               string
+	RouteLabel            string
+	Direction             string
+	Error                 string
+	RequestProcessingTime time.Time
+	Trips                 []Trip
+}
+
+// Trip stores trip data, and includes the adjusted schedule time.
+type Trip struct {
+	TripDestination      string
+	TripStartTime        string
+	AdjustedScheduleTime int
+	AdjustmentAge        float64
+	LastTripOfSchedule
+	BusType string
+	Latitude
+	Longitude
+	GPSSpeed
+}
+
+// LastTripOfSchedule stores both the data and if the data was set by the API
+type LastTripOfSchedule struct {
+	Set   bool
+	Value bool
+}
+
+// Latitude stores both the data and if the data was set by the API
+type Latitude struct {
+	Set   bool
+	Value float64
+}
+
+// Longitude stores both the data and if the data was set by the API
+type Longitude struct {
+	Set   bool
+	Value float64
+}
+
+// GPSSpeed stores both the data and if the data was set by the API
+type GPSSpeed struct {
+	Set   bool
+	Value float64
+}
+
+// rawNextTripsForStop is a wrapper around the XML data returned by
+// a request to GetNextTripsForStop.
+type rawNextTripsForStop struct {
 	XMLName xml.Name `xml:"Envelope"`
 	Text    string   `xml:",chardata"`
 	Soap    string   `xml:"soap,attr"`
@@ -208,7 +277,7 @@ type NextTripsForStop struct {
 				Route struct {
 					Text           string `xml:",chardata"`
 					Xmlns          string `xml:"xmlns,attr"`
-					RouteDirection struct {
+					RouteDirection []struct {
 						Text                  string `xml:",chardata"`
 						RouteNo               string `xml:"RouteNo"`
 						RouteLabel            string `xml:"RouteLabel"`
@@ -216,19 +285,8 @@ type NextTripsForStop struct {
 						Error                 string `xml:"Error"`
 						RequestProcessingTime string `xml:"RequestProcessingTime"`
 						Trips                 struct {
-							Text string `xml:",chardata"`
-							Trip []struct {
-								Text                 string `xml:",chardata"`
-								TripDestination      string `xml:"TripDestination"`
-								TripStartTime        string `xml:"TripStartTime"`
-								AdjustedScheduleTime string `xml:"AdjustedScheduleTime"`
-								AdjustmentAge        string `xml:"AdjustmentAge"`
-								LastTripOfSchedule   string `xml:"LastTripOfSchedule"`
-								BusType              string `xml:"BusType"`
-								Latitude             string `xml:"Latitude"`
-								Longitude            string `xml:"Longitude"`
-								GPSSpeed             string `xml:"GPSSpeed"`
-							} `xml:"Trip"`
+							Text string       `xml:",chardata"`
+							Trip []rawXMLTrip `xml:"Trip"`
 						} `xml:"Trips"`
 					} `xml:"RouteDirection"`
 				} `xml:"Route"`
@@ -237,9 +295,71 @@ type NextTripsForStop struct {
 	} `xml:"Body"`
 }
 
+type rawXMLTrip struct {
+	Text                 string `xml:",chardata"`
+	TripDestination      string `xml:"TripDestination"`
+	TripStartTime        string `xml:"TripStartTime"`
+	AdjustedScheduleTime string `xml:"AdjustedScheduleTime"`
+	AdjustmentAge        string `xml:"AdjustmentAge"`
+	LastTripOfSchedule   string `xml:"LastTripOfSchedule"`
+	BusType              string `xml:"BusType"`
+	Latitude             string `xml:"Latitude"`
+	Longitude            string `xml:"Longitude"`
+	GPSSpeed             string `xml:"GPSSpeed"`
+}
+
+// Cook takes a raw XML NextTripsForStop and simplifies it.
+func (d *rawNextTripsForStop) cook() (*NextTripsForStop, error) {
+	cooked := &NextTripsForStop{}
+
+	cooked.StopNo = d.Body.GetNextTripsForStopResponse.GetNextTripsForStopResult.StopNo.Text
+	cooked.StopLabel = d.Body.GetNextTripsForStopResponse.GetNextTripsForStopResult.StopLabel.Text
+
+	errorText, err := checkErrorCode(d.Body.GetNextTripsForStopResponse.GetNextTripsForStopResult.Error.Text)
+	if err != nil {
+		return nil, err
+	}
+	cooked.Error = errorText
+
+	for _, rd := range d.Body.GetNextTripsForStopResponse.GetNextTripsForStopResult.Route.RouteDirection {
+		crd := RouteDirection{}
+		crd.RouteNo = rd.RouteNo
+		crd.RouteLabel = rd.RouteLabel
+		crd.Direction = rd.Direction
+
+		errorText, err := checkErrorCode(rd.Error)
+		if err != nil {
+			return nil, err
+		}
+		crd.Error = errorText
+
+		tz, err := time.LoadLocation("America/Toronto")
+		if err != nil {
+			return nil, err
+		}
+
+		parsedProcessingTime, err := time.ParseInLocation("20060102150405", rd.RequestProcessingTime, tz)
+		if err != nil {
+			return nil, err
+		}
+
+		crd.RequestProcessingTime = parsedProcessingTime
+
+		for _, t := range rd.Trips.Trip {
+			ct, err := t.convert()
+			if err != nil {
+				return nil, err
+			}
+			crd.Trips = append(crd.Trips, ct)
+		}
+		cooked.RouteDirections = append(cooked.RouteDirections, crd)
+	}
+	return cooked, nil
+}
+
 // GetNextTripsForStop returns the next three trips on the route for a given stop number.
 func (c Connection) GetNextTripsForStop(ctx context.Context, routeNo, stopNo string) (*NextTripsForStop, error) {
-	u, err := url.Parse(APIURLPrefix + "GetNextTripsForStop")
+	u, err := url.Parse(c.cAPIURLPrefix + "GetNextTripsForStop")
 	if err != nil {
 		return nil, err
 	}
@@ -257,15 +377,37 @@ func (c Connection) GetNextTripsForStop(ctx context.Context, routeNo, stopNo str
 	dec := xml.NewDecoder(respBody)
 	dec.CharsetReader = charset.NewReaderLabel
 	dec.Strict = false
-	data := &NextTripsForStop{}
+	data := &rawNextTripsForStop{}
 	err = dec.Decode(data)
 	respBody.Close()
-	return data, err
+	if err != nil {
+		return nil, err
+	}
+
+	return data.cook()
 }
 
-// NextTripsForStopAllRoutes is a rough wrapper around the XML data returned by
-// a request to GetNextTripsForStopAllRoutes. #TODO: Create a SimpleGetNextTripsForStopAllRoutes
+// NextTripsForStopAllRoutes is a simplified version of the data returned by
+// a request to GetNextTripsForStopAllRoutes
 type NextTripsForStopAllRoutes struct {
+	StopNo          string
+	StopDescription string
+	Error           string
+	Routes          []RouteWithTrips
+}
+
+// RouteWithTrips is used by NextTripsForStopAllRoutes to store route data.
+type RouteWithTrips struct {
+	RouteNo      string
+	DirectionID  string
+	Direction    string
+	RouteHeading string
+	Trips        []Trip
+}
+
+// NextTripsForStopAllRoutes is a wrapper around the XML data returned by
+// a request to GetNextTripsForStopAllRoutes.
+type rawNextTripsForStopAllRoutes struct {
 	XMLName xml.Name `xml:"Envelope"`
 	Text    string   `xml:",chardata"`
 	Soap    string   `xml:"soap,attr"`
@@ -300,19 +442,8 @@ type NextTripsForStopAllRoutes struct {
 						Direction    string `xml:"Direction"`
 						RouteHeading string `xml:"RouteHeading"`
 						Trips        struct {
-							Text string `xml:",chardata"`
-							Trip []struct {
-								Text                 string `xml:",chardata"`
-								TripDestination      string `xml:"TripDestination"`
-								TripStartTime        string `xml:"TripStartTime"`
-								AdjustedScheduleTime string `xml:"AdjustedScheduleTime"`
-								AdjustmentAge        string `xml:"AdjustmentAge"`
-								LastTripOfSchedule   string `xml:"LastTripOfSchedule"`
-								BusType              string `xml:"BusType"`
-								Latitude             string `xml:"Latitude"`
-								Longitude            string `xml:"Longitude"`
-								GPSSpeed             string `xml:"GPSSpeed"`
-							} `xml:"Trip"`
+							Text string       `xml:",chardata"`
+							Trip []rawXMLTrip `xml:"Trip"`
 						} `xml:"Trips"`
 					} `xml:"Route"`
 				} `xml:"Routes"`
@@ -321,9 +452,41 @@ type NextTripsForStopAllRoutes struct {
 	} `xml:"Body"`
 }
 
+// Cook takes a raw XML NextTripsForStopAllRoutes and simplifies it.
+func (d *rawNextTripsForStopAllRoutes) cook() (*NextTripsForStopAllRoutes, error) {
+	cooked := &NextTripsForStopAllRoutes{}
+
+	cooked.StopNo = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.StopNo.Text
+	cooked.StopDescription = d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.StopDescription.Text
+
+	errorText, err := checkErrorCode(d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.Error.Text)
+	if err != nil {
+		return nil, err
+	}
+	cooked.Error = errorText
+
+	for _, rt := range d.Body.GetRouteSummaryForStopResponse.GetRouteSummaryForStopResult.Routes.Route {
+		crt := RouteWithTrips{}
+		crt.RouteNo = rt.RouteNo
+		crt.DirectionID = rt.DirectionID
+		crt.Direction = rt.Direction
+		crt.RouteHeading = rt.RouteHeading
+
+		for _, t := range rt.Trips.Trip {
+			ct, err := t.convert()
+			if err != nil {
+				return nil, err
+			}
+			crt.Trips = append(crt.Trips, ct)
+		}
+		cooked.Routes = append(cooked.Routes, crt)
+	}
+	return cooked, nil
+}
+
 // GetNextTripsForStopAllRoutes returns the next three trips for all routes for a given stop number.
 func (c Connection) GetNextTripsForStopAllRoutes(ctx context.Context, stopNo string) (*NextTripsForStopAllRoutes, error) {
-	u, err := url.Parse(APIURLPrefix + "GetNextTripsForStopAllRoutes")
+	u, err := url.Parse(c.cAPIURLPrefix + "GetNextTripsForStopAllRoutes")
 	if err != nil {
 		return nil, err
 	}
@@ -340,8 +503,91 @@ func (c Connection) GetNextTripsForStopAllRoutes(ctx context.Context, stopNo str
 	dec := xml.NewDecoder(respBody)
 	dec.CharsetReader = charset.NewReaderLabel
 	dec.Strict = false
-	data := &NextTripsForStopAllRoutes{}
+	data := &rawNextTripsForStopAllRoutes{}
 	err = dec.Decode(data)
 	respBody.Close()
-	return data, err
+	if err != nil {
+		return nil, err
+	}
+
+	return data.cook()
+}
+
+func checkErrorCode(errorText string) (string, error) {
+	switch errorText {
+	case "1":
+		return "", errors.New("error returned from API - Invalid API key")
+	case "2":
+		return "", errors.New("error returned from API - Unable to query data source")
+	case "10":
+		return "", errors.New("error returned from API - Invalid stop number")
+	case "11":
+		return "", errors.New("error returned from API - Invalid route number")
+	case "12":
+		return "", errors.New("error returned from API - Stop does not service route")
+	default:
+		return errorText, nil
+	}
+}
+
+func (t rawXMLTrip) convert() (Trip, error) {
+	ct := Trip{}
+	ct.TripDestination = t.TripDestination
+	ct.TripStartTime = t.TripStartTime
+
+	parsedAdjustedScheduleTime, err := strconv.Atoi(t.AdjustedScheduleTime)
+	if err != nil {
+		return ct, err
+	}
+	ct.AdjustedScheduleTime = parsedAdjustedScheduleTime
+
+	parsedAdjustmentAge, err := strconv.ParseFloat(t.AdjustmentAge, 64)
+	if err != nil {
+		return ct, err
+	}
+	ct.AdjustmentAge = parsedAdjustmentAge
+
+	if t.LastTripOfSchedule == "" {
+		ct.LastTripOfSchedule = LastTripOfSchedule{Set: false}
+	} else {
+		parsedLastTripOfSchedule, err := strconv.ParseBool(t.LastTripOfSchedule)
+		if err != nil {
+			return ct, err
+		}
+		ct.LastTripOfSchedule = LastTripOfSchedule{Set: true, Value: parsedLastTripOfSchedule}
+	}
+
+	ct.BusType = t.BusType
+
+	if t.Latitude == "" {
+		ct.Latitude = Latitude{Set: false}
+	} else {
+		parsedLatitude, err := strconv.ParseFloat(t.Latitude, 64)
+		if err != nil {
+			return ct, err
+		}
+		ct.Latitude = Latitude{Set: true, Value: parsedLatitude}
+	}
+
+	if t.Longitude == "" {
+		ct.Longitude = Longitude{Set: false}
+	} else {
+		parsedLongitude, err := strconv.ParseFloat(t.Longitude, 64)
+		if err != nil {
+			return ct, err
+		}
+		ct.Longitude = Longitude{Set: true, Value: parsedLongitude}
+	}
+
+	if t.GPSSpeed == "" {
+		ct.GPSSpeed = GPSSpeed{Set: false}
+	} else {
+		parsedGPSSpeed, err := strconv.ParseFloat(t.GPSSpeed, 64)
+		if err != nil {
+			return ct, err
+		}
+		ct.GPSSpeed = GPSSpeed{Set: true, Value: parsedGPSSpeed}
+	}
+
+	return ct, nil
 }
