@@ -6,7 +6,7 @@
 
 A Go wrapper around the OC Transpo Live Next Bus Arrival Data Feed API.
 
-The OCTranspo Developer documentation is available here: http://www.octranspo.com/developers/documentation
+The OC Transpo Developer documentation is available here: http://www.octranspo.com/developers/documentation
 
 ## Example
 
