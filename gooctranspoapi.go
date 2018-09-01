@@ -1,4 +1,5 @@
-// Package gooctranspoapi provides a Go wrapper around the OC Transpo Live Next Bus Arrival Data Feed API.
+// Package gooctranspoapi provides a Go wrapper around the OC Transpo
+// Live Next Bus Arrival Data Feed API.
 package gooctranspoapi
 
 import (
@@ -20,7 +21,8 @@ import (
 const APIURLPrefix = "https://api.octranspo1.com/v1.2/"
 
 // Connection holds the Application ID and API key needed to make requests.
-// It also has a rate limiter, used by the Connection's methods to limit calls on the API.
+// It also has a rate limiter, used by the Connection's methods to
+// limit calls on the API.
 type Connection struct {
 	ID            string
 	Key           string
@@ -39,13 +41,15 @@ func NewConnection(id, key string) Connection {
 }
 
 // NewConnectionWithRateLimit returns a new connection with a rate limit set.
-// This is helpful for ensuring you don't go over the daily call limit, which is usually 10,000 requests per day.
-// It you use the connection over 24 hours, a connection with a perSecond rate of 0.11572 would make around 9998 requests.
-func NewConnectionWithRateLimit(id, key string, perSecond float64, burst int) Connection {
+// This is helpful for ensuring you don't go over the daily call limit,
+// which is usually 10,000 requests per day.
+// It you use the connection over 24 hours, a connection with a perSec rate
+// of 0.11572 would make around 9998 requests.
+func NewConnectionWithRateLimit(id, key string, perSec float64, burst int) Connection {
 	return Connection{
 		ID:            id,
 		Key:           key,
-		Limiter:       rate.NewLimiter(rate.Limit(perSecond), burst),
+		Limiter:       rate.NewLimiter(rate.Limit(perSec), burst),
 		cAPIURLPrefix: APIURLPrefix,
 	}
 }
@@ -535,26 +539,26 @@ func (t rawXMLTrip) convert() (Trip, error) {
 	ct.TripDestination = t.TripDestination
 	ct.TripStartTime = t.TripStartTime
 
-	parsedAdjustedScheduleTime, err := strconv.Atoi(t.AdjustedScheduleTime)
+	pAdjustedScheduleTime, err := strconv.Atoi(t.AdjustedScheduleTime)
 	if err != nil {
 		return ct, err
 	}
-	ct.AdjustedScheduleTime = parsedAdjustedScheduleTime
+	ct.AdjustedScheduleTime = pAdjustedScheduleTime
 
-	parsedAdjustmentAge, err := strconv.ParseFloat(t.AdjustmentAge, 64)
+	pAdjustmentAge, err := strconv.ParseFloat(t.AdjustmentAge, 64)
 	if err != nil {
 		return ct, err
 	}
-	ct.AdjustmentAge = parsedAdjustmentAge
+	ct.AdjustmentAge = pAdjustmentAge
 
 	if t.LastTripOfSchedule == "" {
 		ct.LastTripOfSchedule = LastTripOfSchedule{Set: false}
 	} else {
-		parsedLastTripOfSchedule, err := strconv.ParseBool(t.LastTripOfSchedule)
+		pLastTripOfSchedule, err := strconv.ParseBool(t.LastTripOfSchedule)
 		if err != nil {
 			return ct, err
 		}
-		ct.LastTripOfSchedule = LastTripOfSchedule{Set: true, Value: parsedLastTripOfSchedule}
+		ct.LastTripOfSchedule = LastTripOfSchedule{Set: true, Value: pLastTripOfSchedule}
 	}
 
 	ct.BusType = t.BusType
@@ -562,31 +566,31 @@ func (t rawXMLTrip) convert() (Trip, error) {
 	if t.Latitude == "" {
 		ct.Latitude = Latitude{Set: false}
 	} else {
-		parsedLatitude, err := strconv.ParseFloat(t.Latitude, 64)
+		pLatitude, err := strconv.ParseFloat(t.Latitude, 64)
 		if err != nil {
 			return ct, err
 		}
-		ct.Latitude = Latitude{Set: true, Value: parsedLatitude}
+		ct.Latitude = Latitude{Set: true, Value: pLatitude}
 	}
 
 	if t.Longitude == "" {
 		ct.Longitude = Longitude{Set: false}
 	} else {
-		parsedLongitude, err := strconv.ParseFloat(t.Longitude, 64)
+		pLongitude, err := strconv.ParseFloat(t.Longitude, 64)
 		if err != nil {
 			return ct, err
 		}
-		ct.Longitude = Longitude{Set: true, Value: parsedLongitude}
+		ct.Longitude = Longitude{Set: true, Value: pLongitude}
 	}
 
 	if t.GPSSpeed == "" {
 		ct.GPSSpeed = GPSSpeed{Set: false}
 	} else {
-		parsedGPSSpeed, err := strconv.ParseFloat(t.GPSSpeed, 64)
+		pGPSSpeed, err := strconv.ParseFloat(t.GPSSpeed, 64)
 		if err != nil {
 			return ct, err
 		}
-		ct.GPSSpeed = GPSSpeed{Set: true, Value: parsedGPSSpeed}
+		ct.GPSSpeed = GPSSpeed{Set: true, Value: pGPSSpeed}
 	}
 
 	return ct, nil
