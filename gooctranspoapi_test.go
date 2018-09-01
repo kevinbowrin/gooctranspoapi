@@ -266,7 +266,7 @@ func TestGetNextTripsForStop(t *testing.T) {
 	}
 
 	expectedTrips := []Trip{
-		Trip{
+		{
 			TripDestination:      "Millennium",
 			TripStartTime:        "11:00",
 			AdjustedScheduleTime: 12,
@@ -277,7 +277,7 @@ func TestGetNextTripsForStop(t *testing.T) {
 			Longitude:            Longitude{Set: true, Value: -75.732058},
 			GPSSpeed:             GPSSpeed{Set: true, Value: 15.9},
 		},
-		Trip{
+		{
 			TripDestination:      "Millennium",
 			TripStartTime:        "11:15",
 			AdjustedScheduleTime: 25,
@@ -288,7 +288,7 @@ func TestGetNextTripsForStop(t *testing.T) {
 			Longitude:            Longitude{Set: true, Value: -75.758024},
 			GPSSpeed:             GPSSpeed{Set: true, Value: 19.2},
 		},
-		Trip{
+		{
 			TripDestination:      "Millennium",
 			TripStartTime:        "11:30",
 			AdjustedScheduleTime: 42,
@@ -482,7 +482,7 @@ func TestGetNextTripsForStopAllRoutes(t *testing.T) {
 	}
 
 	expectedTrips := []Trip{
-		Trip{
+		{
 			TripDestination:      "LeBreton",
 			TripStartTime:        "12:46",
 			AdjustedScheduleTime: 14,
@@ -493,7 +493,7 @@ func TestGetNextTripsForStopAllRoutes(t *testing.T) {
 			Longitude:            Longitude{Set: true, Value: -75.664115},
 			GPSSpeed:             GPSSpeed{Set: true, Value: 51.1},
 		},
-		Trip{
+		{
 			TripDestination:      "LeBreton",
 			TripStartTime:        "13:01",
 			AdjustedScheduleTime: 26,
@@ -504,7 +504,7 @@ func TestGetNextTripsForStopAllRoutes(t *testing.T) {
 			Longitude:            Longitude{Set: false},
 			GPSSpeed:             GPSSpeed{Set: false},
 		},
-		Trip{
+		{
 			TripDestination:      "LeBreton",
 			TripStartTime:        "13:16",
 			AdjustedScheduleTime: 42,
