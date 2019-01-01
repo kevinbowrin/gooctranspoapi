@@ -94,7 +94,7 @@ func (c Connection) performGTFSRequest(ctx context.Context, u *url.URL) (io.Read
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		if resp != nil {
 			resp.Body.Close()

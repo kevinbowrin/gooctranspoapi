@@ -22,11 +22,13 @@ const APIURLPrefix = "https://api.octranspo1.com/v1.2/"
 
 // Connection holds the Application ID and API key needed to make requests.
 // It also has a rate limiter, used by the Connection's methods to
-// limit calls on the API.
+// limit calls on the API. The HTTP Client is a public field, so that it
+// can be swapped out with a custom HTTP Client if needed.
 type Connection struct {
 	ID            string
 	Key           string
 	Limiter       *rate.Limiter
+	HTTPClient    *http.Client
 	cAPIURLPrefix string
 }
 
@@ -36,6 +38,7 @@ func NewConnection(id, key string) Connection {
 		ID:            id,
 		Key:           key,
 		Limiter:       rate.NewLimiter(rate.Inf, 0),
+		HTTPClient:    http.DefaultClient,
 		cAPIURLPrefix: APIURLPrefix,
 	}
 }
@@ -50,6 +53,7 @@ func NewConnectionWithRateLimit(id, key string, perSec float64, burst int) Conne
 		ID:            id,
 		Key:           key,
 		Limiter:       rate.NewLimiter(rate.Limit(perSec), burst),
+		HTTPClient:    http.DefaultClient,
 		cAPIURLPrefix: APIURLPrefix,
 	}
 }
@@ -68,7 +72,7 @@ func (c Connection) performRequest(ctx context.Context, u url.URL, v url.Values)
 		return nil, err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		if resp != nil {
 			resp.Body.Close()
