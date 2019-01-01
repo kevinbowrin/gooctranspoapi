@@ -8,8 +8,8 @@ require (
 	github.com/jpoles1/gopherbadger v2.1.1+incompatible // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect
-	golang.org/x/image v0.0.0-20180708004352-c73c2afc3b81 // indirect
-	golang.org/x/net v0.0.0-20180826012351-8a410e7b638d
+	golang.org/x/image v0.0.0-20181116024801-cd38e8056d9b // indirect
+	golang.org/x/net v0.0.0-20181220203305-927f97764cc3
 	golang.org/x/text v0.3.0 // indirect
-	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2
+	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c
 )
