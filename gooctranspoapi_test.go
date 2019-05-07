@@ -30,6 +30,12 @@ func TestRouteSummaryForStop(t *testing.T) {
             <DirectionID>1</DirectionID>
             <Direction>Eastbound</Direction>
             <RouteHeading>St-Laurent</RouteHeading>
+          </Route>          
+          <Route>
+            <RouteNo>R2</RouteNo>
+            <DirectionID>0</DirectionID>
+            <Direction>Northbound</Direction>
+            <RouteHeading>Bayview</RouteHeading>
           </Route>
         </Routes>
       </GetRouteSummaryForStopResult>
@@ -82,6 +88,17 @@ func TestRouteSummaryForStop(t *testing.T) {
 	if routeSummary.Routes[1] != expectedSecondRoute {
 		t.Fatal("Unexpected second route in returned RouteSummaryForStop")
 	}
+
+  expectedThirdRoute := Route{
+    RouteNo:      "R2",
+    DirectionID:  "0",
+    Direction:    "Northbound",
+    RouteHeading: "Bayview",
+  }
+
+  if routeSummary.Routes[2] != expectedThirdRoute {
+    t.Fatal("Unexpected third route in returned RouteSummaryForStop")
+  }
 }
 
 func TestRouteSummaryForStopWithError(t *testing.T) {

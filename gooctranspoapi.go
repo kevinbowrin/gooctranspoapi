@@ -18,7 +18,7 @@ import (
 )
 
 // APIURLPrefix is the address at which the API is available.
-const APIURLPrefix = "https://api.octranspo1.com/v1.2/"
+const APIURLPrefix = "https://api.octranspo1.com/v1.3/"
 
 // Connection holds the Application ID and API key needed to make requests.
 // It also has a rate limiter, used by the Connection's methods to
